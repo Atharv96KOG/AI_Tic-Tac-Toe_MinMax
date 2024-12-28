@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic-Tac-Toe (Smart AI)</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            height: 100vh;
+            display: flex; 
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            font-family: 'Arial', sans-serif;
+            color: white;
+        }
+
+        .main {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            width: 90%;
+            max-width: 400px;
+            position: relative;
+        }
+
+        .btn {
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 2rem;
+            color: white;
+            background: linear-gradient(145deg, #4facfe, #00f2fe);
+            text-align: center;
+            line-height: 100px;
+            aspect-ratio: 1 / 1;
+            border: none;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s ease, background-color 0.3s ease;
+        }
+
+        .btn:hover {
+            transform: scale(1.1);
+            background-color: #00c6ff;
+        }
+
+        .btn.highlight {
+            background-color: #ffcc00 !important;
+            color: black;
+            box-shadow: 0px 0px 15px rgba(255, 204, 0, 0.8);
+        }
+
+        .home {
+            position: absolute;
+            top: -70px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-decoration: none;
+            color: white;
+            background: linear-gradient(145deg, #ff7e5f, #feb47b);
+            padding: 10px 20px;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 30px;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.3);
+            transition: background-color 0.3s ease, transform 0.3s ease;
+        }
+
+        .home:hover {
+            background-color: #ff5733;
+            transform: scale(1.1);
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 1.5rem;
+            z-index: 1000;
+            display: none;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .overlay.show {
+            display: flex;
+        }
+
+        .overlay button {
+            padding: 10px 20px;
+            font-size: 1rem;
+            background: #ff7e5f;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+
+        .overlay button:hover {
+            background: #ff5733;
+        }
+    </style>
+</head>
+<body>
+    <div class="main">
+        <button class="btn" id="btn1"></button>
+        <button class="btn" id="btn2"></button>
+        <button class="btn" id="btn3"></button>
+        <button class="btn" id="btn4"></button>
+        <button class="btn" id="btn5"></button>
+        <button class="btn" id="btn6"></button>
+        <button class="btn" id="btn7"></button>
+        <button class="btn" id="btn8"></button>
+        <button class="btn" id="btn9"></button>
+        <a href="home.html" class="home"> <- Back To Home </a>
+    </div>
+    <div class="overlay" id="overlay">
+        <div id="message"></div>
+        <button onclick="resetGame()">Play Again</button>
+    </div>
+    <script>
+        let human = "X";
+        let ai = "O";
+        let isHumanTurn = true;
+
+        const buttons = [
+            document.getElementById("btn1"),
+            document.getElementById("btn2"),
+            document.getElementById("btn3"),
+            document.getElementById("btn4"),
+            document.getElementById("btn5"),
+            document.getElementById("btn6"),
+            document.getElementById("btn7"),
+            document.getElementById("btn8"),
+            document.getElementById("btn9"),
+        ];
+
+        const overlay = document.getElementById("overlay");
+        const message = document.getElementById("message");
+
+        const winConditions = [
+            [0, 1, 2],
+            [3, 4, 5],
+            [6, 7, 8],
+            [0, 3, 6],
+            [1, 4, 7],
+            [2, 5, 8],
+            [0, 4, 8],
+            [2, 4, 6],
+        ];
+
+        const checkWin = () => {
+            for (let condition of winConditions) {
+                const [a, b, c] = condition;
+                if (
+                    buttons[a].innerText !== "" &&
+                    buttons[a].innerText === buttons[b].innerText &&
+                    buttons[a].innerText === buttons[c].innerText
+                ) {
+                    buttons[a].classList.add("highlight");
+                    buttons[b].classList.add("highlight");
+                    buttons[c].classList.add("highlight");
+                    showOverlay(`${buttons[a].innerText} wins!`);
+                    return true;
+                }
+            }
+
+            if (buttons.every((btn) => btn.innerText !== "")) {
+                showOverlay("It's a draw!");
+                return true;
+            }
+
+            return false;
+        };
+
+        const resetGame = () => {
+            buttons.forEach((btn) => {
+                btn.innerText = "";
+                btn.classList.remove("highlight");
+            });
+            isHumanTurn = true;
+            overlay.classList.remove("show");
+        };
+
+        const minimax = (board, depth, isMaximizing) => {
+            if (checkGameStatus(board) !== null) {
+                return score(board);
+            }
+
+            let bestScore = isMaximizing ? -Infinity : Infinity;
+            const availableMoves = getAvailableMoves(board);
+
+            for (let move of availableMoves) {
+                board[move] = isMaximizing ? ai : human;
+                const score = minimax(board, depth + 1, !isMaximizing);
+                board[move] = "";
+
+                if (isMaximizing) {
+                    bestScore = Math.max(score, bestScore);
+                } else {
+                    bestScore = Math.min(score, bestScore);
+                }
+            }
+
+            return bestScore;
+        };
+
+        const checkGameStatus = (board) => {
+            for (let condition of winConditions) {
+                const [a, b, c] = condition;
+                if (board[a] === board[b] && board[a] === board[c] && board[a] !== "") {
+                    return board[a];
+                }
+            }
+
+            if (board.every((cell) => cell !== "")) {
+                return "draw";
+            }
+
+            return null;
+        };
+
+        const score = (board) => {
+            const winner = checkGameStatus(board);
+            if (winner === ai) return 10;
+            if (winner === human) return -10;
+            return 0;
+        };
+
+        const getAvailableMoves = (board) => {
+            return board
+                .map((value, index) => (value === "" ? index : null))
+                .filter((index) => index !== null);
+        };
+
+        const aiMove = () => {
+            let bestMove = -1;
+            let bestScore = -Infinity;
+            const board = buttons.map((btn) => btn.innerText);
+
+            const availableMoves = getAvailableMoves(board);
+            for (let move of availableMoves) {
+                board[move] = ai;
+                const moveScore = minimax(board, 0, false);
+                board[move] = "";
+
+                if (moveScore > bestScore) {
+                    bestScore = moveScore;
+                    bestMove = move;
+                }
+            }
+
+            buttons[bestMove].innerText = ai;
+            checkWin();
+        };
+
+        const showOverlay = (text) => {
+            message.innerText = text;
+            overlay.classList.add("show");
+        };
+
+        buttons.forEach((button) => {
+            button.onclick = () => {
+                if (isHumanTurn && button.innerText === "") {
+                    button.innerText = human;
+                    if (!checkWin()) {
+                        isHumanTurn = false;
+                        setTimeout(() => {
+                            aiMove();
+                            isHumanTurn = true;
+                            checkWin();
+                        }, 500);
+                    }
+                }
+            };
+        });
+    </script>
+</body>
+</html>
